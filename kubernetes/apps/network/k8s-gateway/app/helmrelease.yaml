@@ -14,8 +14,15 @@ spec:
     ttl: 1
     service:
       type: LoadBalancer
+      loadBalancerClass: tailscale
       port: 53
+      useTcp: true
       annotations:
-        lbipam.cilium.io/ips: "172.16.7.242"
+        tailscale.com/hostname: internal-dns
       externalTrafficPolicy: Cluster
-    watchedResources: ["HTTPRoute", "Service"]
+    filters:
+      gatewayClasses: [tailscale]
+    watchedResources: ["HTTPRoute"]
+    fallthrough:
+      enabled: true
+      zones: ["${SECRET_DOMAIN}"]
