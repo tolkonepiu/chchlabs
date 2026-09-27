@@ -21,7 +21,7 @@ spec:
         - notification-controller
       sync:
         kind: GitRepository
-        url: "ssh://git@github.com:tolkonepiu/chchlabs.git"
+        url: "ssh://git@github.com/tolkonepiu/chchlabs.git"
         pullSecret: deploy-key
         ref: "refs/heads/main"
         path: kubernetes/flux/cluster
