@@ -78,7 +78,7 @@ apps-secrets:
     for secret in \
         "{{ source_directory() }}/deploy-key.sops.yaml" \
         "{{ source_directory() }}/sops-age.sops.yaml" \
-        "{{ kubernetes_dir }}/components/sops/cluster-secrets.sops.yaml"
+        "{{ kubernetes_dir }}/components/common/sops/cluster-secrets.sops.yaml"
     do
         name="$(basename "$secret" .sops.yaml)"
         if sops decrypt "$secret" \
