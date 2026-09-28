@@ -1,0 +1,75 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: isponsorblocktv
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  values:
+    controllers:
+      isponsorblocktv:
+        annotations:
+          reloader.stakater.com/auto: "true"
+        strategy: RollingUpdate
+        initContainers:
+          01-wait-for-youtube:
+            image:
+              repository: ghcr.io/dmunozv04/isponsorblocktv
+              tag: v2.11.0@sha256:d1e876636754fb2b54490feebe3af4a321f7f2a932a2d57b67b2a667eea40823
+            command:
+              - python3
+              - /app/youtube-healthcheck.py
+              - --attempts=10
+              - --sleep=10
+              - --timeout=10
+        containers:
+          app:
+            image:
+              repository: ghcr.io/dmunozv04/isponsorblocktv
+              tag: v2.11.0@sha256:d1e876636754fb2b54490feebe3af4a321f7f2a932a2d57b67b2a667eea40823
+            probes:
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - python3
+                      - /app/youtube-healthcheck.py
+                      - --attempts=1
+                      - --sleep=0
+                      - --timeout=5
+                  initialDelaySeconds: 30
+                  periodSeconds: 30
+                  timeoutSeconds: 20
+                  failureThreshold: 5
+              readiness:
+                enabled: false
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                memory: 128Mi
+    persistence:
+      config:
+        type: secret
+        name: isponsorblocktv-config
+        globalMounts:
+          - path: /app/data
+            readOnly: true
+      scripts:
+        type: configMap
+        name: isponsorblocktv-scripts
+        globalMounts:
+          - path: /app/youtube-healthcheck.py
+            subPath: youtube-healthcheck.py
+            readOnly: true
