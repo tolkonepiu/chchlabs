@@ -47,13 +47,13 @@ spec:
               - name: INIT_POSTGRES_SUPER_USER
                 valueFrom:
                   secretKeyRef:
-                    name: cloudnative-pg-secret
-                    key: username
+                    name: cluster-secrets
+                    key: POSTGRES_SUPER_USER
               - name: INIT_POSTGRES_SUPER_PASS
                 valueFrom:
                   secretKeyRef:
-                    name: cloudnative-pg-secret
-                    key: password
+                    name: cluster-secrets
+                    key: POSTGRES_SUPER_PASS
         containers:
           app:
             image:
