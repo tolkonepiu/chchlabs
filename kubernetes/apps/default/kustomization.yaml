@@ -9,3 +9,4 @@ components:
 resources:
   - ./echo/ks.yaml
   - ./isponsorblocktv/ks.yaml
+  - ./remnawave/ks.yaml
