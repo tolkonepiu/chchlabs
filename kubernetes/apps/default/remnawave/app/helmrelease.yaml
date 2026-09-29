@@ -74,7 +74,7 @@ spec:
               - name: APP_PORT
                 value: &port 3000
               - name: METRICS_PORT
-                value: &metricsPort 3000
+                value: &metricsPort 3001
               - name: SUB_PUBLIC_DOMAIN
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}/api/sub"
               - name: PM2_HOME
