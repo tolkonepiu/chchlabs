@@ -80,7 +80,7 @@ spec:
               - name: FRONT_END_DOMAIN
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}"
               - name: SUB_PUBLIC_DOMAIN
-                value: "{{ .Release.Name }}.${SECRET_DOMAIN}/api/sub"
+                value: "rv.${SECRET_DOMAIN}/api/sub"
               - name: PM2_HOME
                 value: /tmp/.pm2
             securityContext:
@@ -110,5 +110,20 @@ spec:
             sectionName: https
         rules:
           - backendRefs:
+              - name: *app
+                port: *port
+      external:
+        hostnames:
+          - "rv.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-external
+            namespace: network
+            sectionName: https
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api/sub
+            backendRefs:
               - name: *app
                 port: *port
