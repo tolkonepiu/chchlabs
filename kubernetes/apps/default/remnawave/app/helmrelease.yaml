@@ -77,6 +77,8 @@ spec:
                 value: &metricsPort 3000
               - name: SUB_PUBLIC_DOMAIN
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}/api/sub"
+              - name: PM2_HOME
+                value: /tmp/.pm2
             securityContext:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
@@ -94,11 +96,6 @@ spec:
         ports:
           http:
             port: *port
-    persistence:
-      config:
-        type: emptyDir
-        globalMounts:
-          - path: /config
     route:
       app:
         hostnames:
