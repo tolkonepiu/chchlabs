@@ -3,20 +3,34 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: &name valkey-operator
+  name: &name valkey
 spec:
   chartRef:
     kind: OCIRepository
     name: *name
   interval: 1h
   values:
-    replicaCount: 2
-    manager:
-      leaderElection:
-        enabled: true
-    metrics:
+    replica:
       enabled: false
-      serviceMonitor:
-        enabled: false
-    podDisruptionBudget:
+    dataStorage:
       enabled: false
+    auth:
+      enabled: false
+    tls:
+      enabled: false
+    valkeyConfig: |
+      cluster-enabled no
+      maxmemory 384mb
+      maxmemory-policy noeviction
+      save ""
+      appendonly no
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+    readinessProbe:
+      enabled: true
+    livenessProbe:
+      enabled: true
