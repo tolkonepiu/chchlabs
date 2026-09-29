@@ -79,8 +79,6 @@ spec:
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}"
               - name: FRONT_END_DOMAIN
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}"
-              - name: SUB_PUBLIC_DOMAIN
-                value: "rv.${SECRET_DOMAIN}/api/sub"
               - name: PM2_HOME
                 value: /tmp/.pm2
             securityContext:
