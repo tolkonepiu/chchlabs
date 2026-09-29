@@ -123,7 +123,28 @@ spec:
           - matches:
               - path:
                   type: PathPrefix
-                  value: /api/sub
+                  value: /api/sub/
+            backendRefs:
+              - name: *app
+                port: *port
+          - matches:
+              - path:
+                  type: Exact
+                  value: /api/system/metadata
+            backendRefs:
+              - name: *app
+                port: *port
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api/subscription-page-configs
+            backendRefs:
+              - name: *app
+                port: *port
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api/subscriptions/subpage-config/
             backendRefs:
               - name: *app
                 port: *port
