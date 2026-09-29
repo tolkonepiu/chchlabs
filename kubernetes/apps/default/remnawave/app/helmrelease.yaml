@@ -75,6 +75,10 @@ spec:
                 value: &port 3000
               - name: METRICS_PORT
                 value: &metricsPort 3001
+              - name: PANEL_DOMAIN
+                value: "{{ .Release.Name }}.${SECRET_DOMAIN}"
+              - name: FRONT_END_DOMAIN
+                value: "{{ .Release.Name }}.${SECRET_DOMAIN}"
               - name: SUB_PUBLIC_DOMAIN
                 value: "{{ .Release.Name }}.${SECRET_DOMAIN}/api/sub"
               - name: PM2_HOME
