@@ -1,0 +1,22 @@
+---
+apiVersion: valkey.io/v1alpha1
+kind: ValkeyCluster
+metadata:
+  name: hecate
+spec:
+  shards: 1
+  replicas: 0
+  workloadType: Deployment
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  config:
+    maxmemory: 384mb
+    maxmemory-policy: allkeys-lru
+    appendonly: "no"
+  exporter:
+    enabled: false
+  terminationGracePeriodSeconds: 30
