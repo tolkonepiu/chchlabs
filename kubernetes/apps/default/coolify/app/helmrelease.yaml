@@ -181,3 +181,18 @@ spec:
           - backendRefs:
               - name: *app
                 port: *httpPort
+      external:
+        hostnames:
+          - "clf.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-external
+            namespace: network
+            sectionName: https
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /api/v1/sentinel/push
+            backendRefs:
+              - name: *app
+                port: *httpPort
