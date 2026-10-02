@@ -196,3 +196,10 @@ spec:
             backendRefs:
               - name: *app
                 port: *httpPort
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /webhooks/source
+            backendRefs:
+              - name: *app
+                port: *httpPort
