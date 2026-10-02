@@ -33,3 +33,11 @@ spec:
       replicaZoneSoftAntiAffinity: "true"
       createDefaultDiskLabeledNodes: "false"
       allowVolumeCreationWithDegradedAvailability: "false"
+    httproute:
+      enabled: true
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+          sectionName: https
+      hostnames:
+        - "{{ .Release.Name }}.${SECRET_DOMAIN}"
