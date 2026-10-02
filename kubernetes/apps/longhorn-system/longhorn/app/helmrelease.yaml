@@ -1,0 +1,35 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: longhorn
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: longhorn
+  install:
+    disableHooks: true
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    disableHooks: true
+    remediation:
+      retries: 3
+  values:
+    persistence:
+      defaultClass: false
+      defaultClassReplicaCount: 3
+      defaultFsType: ext4
+      defaultDataLocality: disabled
+      dataEngine: v1
+    defaultSettings:
+      defaultDataPath: /var/mnt/longhorn
+      defaultReplicaCount: '{"v1":"3","v2":"3"}'
+      replicaSoftAntiAffinity: "false"
+      replicaDiskSoftAntiAffinity: "false"
+      replicaZoneSoftAntiAffinity: "true"
+      createDefaultDiskLabeledNodes: "false"
+      allowVolumeCreationWithDegradedAvailability: "false"

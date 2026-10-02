@@ -1,0 +1,12 @@
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: longhorn
+volumeType: partition
+provisioning:
+  diskSelector:
+    match: 'disk.dev_path == "/dev/sdb"'
+  minSize: 300GB
+  maxSize: 300GB
+  grow: false
+filesystem:
+  type: ext4
