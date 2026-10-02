@@ -40,4 +40,4 @@ spec:
           namespace: network
           sectionName: https
       hostnames:
-        - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        - "longhorn.${SECRET_DOMAIN}"
