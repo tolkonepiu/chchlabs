@@ -1,0 +1,183 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app coolify
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  values:
+    controllers:
+      coolify:
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        initContainers:
+          01-init-db:
+            image:
+              repository: ghcr.io/home-operations/postgres-init
+              tag: 18.6@sha256:b6d3af974df781c673d37e49bdddfa14a6f5be28b18d2cb7713f0449bea4057b
+            envFrom:
+              - secretRef:
+                  name: coolify-secret
+            env:
+              - name: INIT_POSTGRES_HOST
+                value: phobos-rw.database.svc.cluster.local
+              - name: INIT_POSTGRES_PORT
+                value: "5432"
+              - name: INIT_POSTGRES_DBNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: DB_DATABASE
+              - name: INIT_POSTGRES_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: DB_USERNAME
+              - name: INIT_POSTGRES_PASS
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: DB_PASSWORD
+              - name: INIT_POSTGRES_SUPER_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: cluster-secrets
+                    key: POSTGRES_SUPER_USER
+              - name: INIT_POSTGRES_SUPER_PASS
+                valueFrom:
+                  secretKeyRef:
+                    name: cluster-secrets
+                    key: POSTGRES_SUPER_PASS
+        containers:
+          app:
+            image:
+              repository: ghcr.io/coollabsio/coolify
+              tag: 4.3.23
+            envFrom:
+              - secretRef:
+                  name: coolify-secret
+            env:
+              - name: APP_ENV
+                value: production
+              - name: APP_URL
+                value: https://{{ .Release.Name }}.${SECRET_DOMAIN}
+              - name: DB_CONNECTION
+                value: pgsql
+              - name: DB_HOST
+                value: phobos-rw.database.svc.cluster.local
+              - name: DB_PORT
+                value: "5432"
+              - name: REDIS_HOST
+                value: valkey.database.svc.cluster.local
+              - name: REDIS_PORT
+                value: "6379"
+              - name: PUSHER_SCHEME
+                value: https
+              - name: PUSHER_BACKEND_HOST
+                value: 127.0.0.1
+              - name: PUSHER_BACKEND_PORT
+                value: "6001"
+              - name: PUSHER_BACKEND_SCHEME
+                value: http
+            ports:
+              - name: http
+                containerPort: &httpPort 8080
+              - name: realtime
+                containerPort: &realtimePort 6001
+              - name: terminal
+                containerPort: &terminalPort 6002
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *httpPort
+                  failureThreshold: 60
+                  periodSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *httpPort
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *httpPort
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+              seccompProfile:
+                type: RuntimeDefault
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 9999
+        runAsGroup: 9999
+        runAsNonRoot: true
+        fsGroup: 9999
+        fsGroupChangePolicy: OnRootMismatch
+    persistence:
+      app-storage:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+        retain: true
+        globalMounts:
+          - path: /var/www/html/storage/app
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *httpPort
+          realtime:
+            port: *realtimePort
+          terminal:
+            port: *terminalPort
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /app
+            backendRefs:
+              - name: *app
+                port: *realtimePort
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /apps
+            backendRefs:
+              - name: *app
+                port: *realtimePort
+          - matches:
+              - path:
+                  type: PathPrefix
+                  value: /terminal/ws
+            backendRefs:
+              - name: *app
+                port: *terminalPort
+          - backendRefs:
+              - name: *app
+                port: *httpPort

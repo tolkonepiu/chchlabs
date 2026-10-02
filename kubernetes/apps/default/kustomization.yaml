@@ -8,6 +8,7 @@ components:
 
 resources:
   - ./atuin/ks.yaml
+  - ./coolify/ks.yaml
   - ./echo/ks.yaml
   - ./isponsorblocktv/ks.yaml
   - ./remnawave/ks.yaml
