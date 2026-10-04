@@ -58,7 +58,7 @@ spec:
           app:
             image:
               repository: ghcr.io/coollabsio/coolify
-              tag: 4.3.23
+              tag: 4.3.23@sha256:79d5c0443696f2fcb280a4d5a15fcc091a51784e566ab212889a08e424d8187c
             envFrom:
               - secretRef:
                   name: coolify-secret
@@ -88,10 +88,6 @@ spec:
             ports:
               - name: http
                 containerPort: &httpPort 8080
-              - name: realtime
-                containerPort: &realtimePort 6001
-              - name: terminal
-                containerPort: &terminalPort 6002
             probes:
               startup:
                 enabled: true
@@ -120,6 +116,83 @@ spec:
               allowPrivilegeEscalation: false
               readOnlyRootFilesystem: false
               capabilities: { drop: ["ALL"] }
+              seccompProfile:
+                type: RuntimeDefault
+          realtime:
+            image:
+              repository: coollabsio/coolify-realtime
+              tag: 1.0.20@sha256:e58e4ae6bd2446125dc54edf3a0d36e4084bb4a43f392eebb0d1518251378334
+            env:
+              - name: SOKETI_DEFAULT_APP_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: PUSHER_APP_ID
+              - name: SOKETI_DEFAULT_APP_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: PUSHER_APP_KEY
+              - name: SOKETI_DEFAULT_APP_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: coolify-secret
+                    key: PUSHER_APP_SECRET
+              - name: SOKETI_HOST
+                value: 0.0.0.0
+              - name: SOKETI_DEBUG
+                value: "false"
+            ports:
+              - name: realtime
+                containerPort: &realtimePort 6001
+              - name: terminal
+                containerPort: &terminalPort 6002
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - wget -q -O /dev/null http://127.0.0.1:6001/ready && wget -q -O /dev/null http://127.0.0.1:6002/ready
+                  failureThreshold: 60
+                  periodSeconds: 5
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - wget -q -O /dev/null http://127.0.0.1:6001/ready && wget -q -O /dev/null http://127.0.0.1:6002/ready
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -ec
+                      - wget -q -O /dev/null http://127.0.0.1:6001/ready && wget -q -O /dev/null http://127.0.0.1:6002/ready
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+            securityContext:
+              runAsUser: 0
+              runAsGroup: 0
+              runAsNonRoot: false
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities:
+                drop: ["ALL"]
+                add: ["DAC_OVERRIDE"]
               seccompProfile:
                 type: RuntimeDefault
     defaultPodOptions:
