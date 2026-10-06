@@ -126,6 +126,7 @@ spec:
             - /var/log/containers/envoy-external-*_network_envoy-*.log
             - /var/log/containers/envoy-internal-*_network_envoy-*.log
           force_inotify: true
+          poll_without_inotify: true
           labels:
             type: containerd
             program: envoy
