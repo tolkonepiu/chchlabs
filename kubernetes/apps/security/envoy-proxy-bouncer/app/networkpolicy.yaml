@@ -1,0 +1,22 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: envoy-proxy-bouncer
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: envoy-proxy-bouncer
+      app.kubernetes.io/instance: envoy-proxy-bouncer
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: network
+          podSelector:
+            matchLabels:
+              gateway.envoyproxy.io/owning-gateway-name: envoy-external
+      ports:
+        - protocol: TCP
+          port: 8080

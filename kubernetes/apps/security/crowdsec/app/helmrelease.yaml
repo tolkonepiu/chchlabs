@@ -86,6 +86,13 @@ spec:
             secretKeyRef:
               name: crowdsec-secret
               key: CROWDSEC_WEB_UI_PASSWORD
+        # Registration is create-only: rotate the key with a new BOUNCER_KEY_<name>,
+        # then retire the old identity after replacement bouncers synchronize.
+        - name: BOUNCER_KEY_envoy_proxy_bouncer
+          valueFrom:
+            secretKeyRef:
+              name: envoy-proxy-bouncer
+              key: api-key
       lifecycle:
         postStart:
           exec:

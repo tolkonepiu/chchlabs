@@ -1,0 +1,57 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: envoy-proxy-bouncer
+spec:
+  releaseName: envoy-proxy-bouncer
+  chartRef:
+    kind: OCIRepository
+    name: envoy-proxy-bouncer
+  interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: envoy-proxy-bouncer
+            patch: |
+              - op: add
+                path: /metadata/annotations
+                value:
+                  secret.reloader.stakater.com/reload: envoy-proxy-bouncer
+  values:
+    fullnameOverride: envoy-proxy-bouncer
+    replicaCount: 2
+    image:
+      repository: ghcr.io/kdwils/envoy-proxy-bouncer
+      tag: v0.8.1@sha256:7ef7255569d72ff8c347bb3869a4fd976bd6fe718720936b0dd7d23bfc994c67
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    config:
+      trustedIPHeader: ""
+      trustedProxies: [10.42.0.0/16]
+      exemptIPs: []
+      bouncer:
+        enabled: true
+        lapiURL: http://crowdsec-service.security.svc.cluster.local:8080
+        apiKeySecretRef:
+          name: envoy-proxy-bouncer
+          key: api-key
+        tickerInterval: 10s
+        metrics: false
+      waf:
+        enabled: false
+      captcha:
+        enabled: false
+      prometheus:
+        enabled: false
+    referenceGrant:
+      create: true
+      fromNamespaces: [network]
