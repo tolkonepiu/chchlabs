@@ -1,0 +1,136 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: crowdsec
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: crowdsec
+  interval: 1h
+  values:
+    container_runtime: containerd
+    image:
+      repository: crowdsecurity/crowdsec
+      tag: v1.8.1@sha256:0f2523fa61ef507f15d953045cface490cc880670c62f2755ced17524107f71a
+    secrets:
+      externalSecret:
+        name: crowdsec-secret
+        csLapiSecretKey: CROWDSEC_LAPI_SECRET
+        registrationTokenKey: CROWDSEC_REGISTRATION_TOKEN
+    config:
+      # Escape Flux substitution; CrowdSec expands these at runtime.
+      config.yaml.local: |
+        crowdsec_service:
+          enable: false
+        db_config:
+          type: postgresql
+          host: phobos-rw.database.svc.cluster.local
+          port: 5432
+          db_name: crowdsec
+          user: crowdsec
+          password: "$${CROWDSEC_DB_PASSWORD}"
+          sslmode: require
+        api:
+          server:
+            auto_registration:
+              enabled: true
+              token: "$${REGISTRATION_TOKEN}"
+              allowed_ranges:
+                - 10.42.0.0/16
+    lapi:
+      enabled: true
+      replicas: 1
+      strategy:
+        type: Recreate
+      deployAnnotations:
+        reloader.stakater.com/auto: "true"
+      storeCAPICredentialsInSecret: false
+      storeLAPICscliCredentialsInSecret: false
+      extraInitContainers:
+        - name: 01-init-db
+          image: ghcr.io/home-operations/postgres-init:18.6@sha256:b6d3af974df781c673d37e49bdddfa14a6f5be28b18d2cb7713f0449bea4057b
+          env:
+            - name: INIT_POSTGRES_HOST
+              value: phobos-rw.database.svc.cluster.local
+            - name: INIT_POSTGRES_PORT
+              value: "5432"
+            - name: INIT_POSTGRES_DBNAME
+              value: crowdsec
+            - name: INIT_POSTGRES_USER
+              value: crowdsec
+            - name: INIT_POSTGRES_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: crowdsec-secret
+                  key: CROWDSEC_DB_PASSWORD
+            - name: INIT_POSTGRES_SUPER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_USER
+            - name: INIT_POSTGRES_SUPER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_PASS
+      env:
+        - name: CROWDSEC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec-secret
+              key: CROWDSEC_DB_PASSWORD
+        - name: CROWDSEC_WEB_UI_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: crowdsec-secret
+              key: CROWDSEC_WEB_UI_PASSWORD
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - /bin/sh
+              - -ec
+              - |
+                test -n "$CROWDSEC_WEB_UI_PASSWORD"
+                attempt=0
+                until wget -q -T 2 -O /dev/null http://127.0.0.1:8080/health; do
+                  attempt=$((attempt + 1))
+                  test "$attempt" -lt 60 || exit 1
+                  sleep 2
+                done
+                cscli -c /etc/crowdsec/config.yaml machines add crowdsec-web-ui --password "$CROWDSEC_WEB_UI_PASSWORD" --url http://127.0.0.1:8080 --file /dev/null --force
+                exec cscli -c /etc/crowdsec/config.yaml machines validate crowdsec-web-ui
+      persistentVolume:
+        data:
+          enabled: true
+          accessModes: [ReadWriteOnce]
+          storageClassName: longhorn
+          size: 1Gi
+        config:
+          enabled: true
+          accessModes: [ReadWriteOnce]
+          storageClassName: longhorn
+          size: 100Mi
+      service:
+        type: ClusterIP
+      ingress:
+        enabled: false
+    agent:
+      enabled: true
+      acquisition: []
+      additionalAcquisition:
+        - source: file
+          filenames:
+            - /var/log/containers/envoy-external-*_network_envoy-*.log
+            - /var/log/containers/envoy-internal-*_network_envoy-*.log
+          force_inotify: true
+          labels:
+            type: containerd
+            program: envoy
+      env:
+        - name: COLLECTIONS
+          value: yanis-kouidri/envoy
+    appsec:
+      enabled: false
