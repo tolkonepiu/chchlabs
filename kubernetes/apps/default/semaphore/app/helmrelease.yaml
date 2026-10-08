@@ -1,0 +1,103 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: semaphore
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: semaphore
+  interval: 1h
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart renders admin before extraInitContainers; create the database first.
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: semaphore
+            patch: |-
+              - op: test
+                path: /spec/template/spec/initContainers/0/name
+                value: admin
+              - op: test
+                path: /spec/template/spec/initContainers/1/name
+                value: init-db
+              - op: move
+                from: /spec/template/spec/initContainers/1
+                path: /spec/template/spec/initContainers/0
+  values:
+    fullnameOverride: semaphore
+    replicaCount: 1
+    updateStrategy:
+      type: Recreate
+    annotation:
+      reloader.stakater.com/auto: "true"
+    general:
+      host: https://semaphore.${SECRET_DOMAIN}
+    database:
+      type: postgres
+      host: phobos-rw.database.svc.cluster.local
+      port: 5432
+      name: semaphore
+      usernameFromSecret: true
+      existingSecret: semaphore-secret
+      usernameKey: SEMAPHORE_DB_USER
+      passwordKey: SEMAPHORE_DB_PASS
+    postgresql:
+      enabled: false
+    mariadb:
+      enabled: false
+    ingress:
+      enabled: false
+    admin:
+      create: true
+      existingSecret: semaphore-secret
+      fullnameKey: SEMAPHORE_ADMIN_FULLNAME
+      usernameKey: SEMAPHORE_ADMIN_USERNAME
+      passwordKey: SEMAPHORE_ADMIN_PASSWORD
+      emailKey: SEMAPHORE_ADMIN_EMAIL
+    secrets:
+      existingSecret: semaphore-secret
+      cookieHashKey: SEMAPHORE_COOKIE_HASH
+      cookieEncryptionKey: SEMAPHORE_COOKIE_ENCRYPTION
+      accesskeyEncryptionKey: SEMAPHORE_ACCESS_KEY_ENCRYPTION
+    runner:
+      existingSecret: semaphore-secret
+      tokenKey: SEMAPHORE_RUNNER_REGISTRATION_TOKEN
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 10Gi
+    extraInitContainers:
+      - name: init-db
+        image: ghcr.io/home-operations/postgres-init:18.6@sha256:b6d3af974df781c673d37e49bdddfa14a6f5be28b18d2cb7713f0449bea4057b
+        env:
+          - name: INIT_POSTGRES_HOST
+            value: phobos-rw.database.svc.cluster.local
+          - name: INIT_POSTGRES_PORT
+            value: "5432"
+          - name: INIT_POSTGRES_DBNAME
+            value: semaphore
+          - name: INIT_POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: semaphore-secret
+                key: SEMAPHORE_DB_USER
+          - name: INIT_POSTGRES_PASS
+            valueFrom:
+              secretKeyRef:
+                name: semaphore-secret
+                key: SEMAPHORE_DB_PASS
+          - name: INIT_POSTGRES_SUPER_USER
+            valueFrom:
+              secretKeyRef:
+                name: cluster-secrets
+                key: POSTGRES_SUPER_USER
+          - name: INIT_POSTGRES_SUPER_PASS
+            valueFrom:
+              secretKeyRef:
+                name: cluster-secrets
+                key: POSTGRES_SUPER_PASS
