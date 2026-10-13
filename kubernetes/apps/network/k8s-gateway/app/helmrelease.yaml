@@ -10,19 +10,43 @@ spec:
   interval: 1h
   values:
     fullnameOverride: k8s-gateway
-    domain: "${SECRET_DOMAIN}"
-    ttl: 1
+    deployment:
+      dnsPolicy: ClusterFirst
+    securityContext:
+      runAsUser: 1000
+      capabilities:
+        add: [NET_BIND_SERVICE]
+    serviceType: LoadBalancer
     service:
-      type: LoadBalancer
       loadBalancerClass: tailscale
-      port: 53
-      useTcp: true
       annotations:
         tailscale.com/hostname: internal-dns
       externalTrafficPolicy: Cluster
-    filters:
-      gatewayClasses: [tailscale]
-    watchedResources: ["HTTPRoute"]
-    fallthrough:
-      enabled: true
-      zones: ["${SECRET_DOMAIN}"]
+    servers:
+      - port: 53
+        zones:
+          - zone: "."
+            scheme: dns://
+            use_tcp: true
+        plugins:
+          - name: k8s_gateway
+            parameters: "${SECRET_DOMAIN}"
+            configBlock: |-
+              apex k8s-gateway.network
+              ttl 1
+              resources HTTPRoute
+              gatewayClasses tailscale
+              fallthrough ${SECRET_DOMAIN}
+          - name: log
+          - name: errors
+          - name: health
+            configBlock: |-
+              lameduck 5s
+          - name: ready
+          - name: prometheus
+            parameters: 0.0.0.0:9153
+          - name: forward
+            parameters: . /etc/resolv.conf
+          - name: loop
+          - name: reload
+          - name: loadbalance
