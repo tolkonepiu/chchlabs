@@ -70,6 +70,8 @@ spec:
               # Dedicated logical database to avoid sharing queue keys.
               REDIS_DB: "1"
               HASHEOUS_API_ENABLED: "true"
+              PLAYMATCH_API_ENABLED: "true"
+              HLTB_API_ENABLED: "true"
             ports:
               - name: http
                 containerPort: &port 8080
