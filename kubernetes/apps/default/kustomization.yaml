@@ -12,4 +12,5 @@ resources:
   - ./echo/ks.yaml
   - ./isponsorblocktv/ks.yaml
   - ./remnawave/ks.yaml
+  - ./romm/ks.yaml
   - ./semaphore/ks.yaml
