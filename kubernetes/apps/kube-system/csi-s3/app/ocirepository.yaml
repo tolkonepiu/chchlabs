@@ -6,7 +6,7 @@ metadata:
 spec:
   interval: 15m
   layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    mediaType: application/tar+gzip
     operation: copy
   ref:
     tag: 0.43.7
