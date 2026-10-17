@@ -118,82 +118,6 @@ spec:
                 memory: 512Mi
               limits:
                 memory: 2Gi
-      library-backup:
-        type: cronjob
-        cronjob:
-          schedule: "0 3 * * *"
-          timeZone: Etc/UTC
-          suspend: false
-          concurrencyPolicy: Forbid
-          startingDeadlineSeconds: 3600
-          backoffLimit: 1
-          activeDeadlineSeconds: 21600
-          successfulJobsHistory: 1
-          failedJobsHistory: 2
-        pod:
-          restartPolicy: Never
-          affinity:
-            podAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                - topologyKey: kubernetes.io/hostname
-                  labelSelector:
-                    matchLabels:
-                      app.kubernetes.io/name: romm
-                      app.kubernetes.io/instance: "{{ .Release.Name }}"
-                      app.kubernetes.io/controller: romm
-        containers:
-          backup:
-            image:
-              repository: rclone/rclone
-              tag: 1.74.4@sha256:c61954aaa32328a5486715dd063a81c7879f5195ad3505cd362deddd509dc4a1
-            env:
-              RCLONE_CONFIG: /dev/null
-              RCLONE_CONFIG_S3_TYPE: s3
-              RCLONE_CONFIG_S3_PROVIDER: Other
-              RCLONE_CONFIG_S3_FORCE_PATH_STYLE: "true"
-              HOME: /tmp
-              XDG_CACHE_HOME: /tmp
-              TMPDIR: /tmp
-              RCLONE_CONFIG_S3_ENDPOINT:
-                valueFrom:
-                  secretKeyRef:
-                    name: romm-secret
-                    key: RCLONE_CONFIG_S3_ENDPOINT
-              RCLONE_CONFIG_S3_ACCESS_KEY_ID:
-                valueFrom:
-                  secretKeyRef:
-                    name: romm-secret
-                    key: RCLONE_CONFIG_S3_ACCESS_KEY_ID
-              RCLONE_CONFIG_S3_SECRET_ACCESS_KEY:
-                valueFrom:
-                  secretKeyRef:
-                    name: romm-secret
-                    key: RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
-              ROMM_BACKUP_S3_BUCKET:
-                valueFrom:
-                  secretKeyRef:
-                    name: romm-secret
-                    key: ROMM_BACKUP_S3_BUCKET
-            command: ["rclone"]
-            args:
-              - copy
-              - /romm/library
-              - "s3:$(ROMM_BACKUP_S3_BUCKET)"
-              - --config=/dev/null
-              - --cache-dir=/tmp/rclone
-              - --log-level=INFO
-            securityContext:
-              allowPrivilegeEscalation: false
-              readOnlyRootFilesystem: true
-              capabilities: { drop: ["ALL"] }
-              seccompProfile:
-                type: RuntimeDefault
-            resources:
-              requests:
-                cpu: 100m
-                memory: 128Mi
-              limits:
-                memory: 512Mi
     defaultPodOptions:
       securityContext:
         runAsUser: 1000
@@ -204,25 +128,12 @@ spec:
     persistence:
       library:
         type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        storageClass: longhorn
-        size: 50Gi
-        retain: true
+        existingClaim: romm-s3
         advancedMounts:
           romm:
             app:
               - path: /romm/library
                 readOnly: false
-          library-backup:
-            backup:
-              - path: /romm/library
-                readOnly: true
-      backup-tmp:
-        type: emptyDir
-        advancedMounts:
-          library-backup:
-            backup:
-              - path: /tmp
       resources:
         type: persistentVolumeClaim
         accessMode: ReadWriteOnce
