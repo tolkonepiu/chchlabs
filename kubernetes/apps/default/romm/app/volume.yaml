@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: romm-library
+  name: romm-library-s3
 spec:
   storageClassName: ""
   capacity:
@@ -12,7 +12,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   claimRef:
     namespace: default
-    name: romm-library
+    name: romm-library-s3
   csi:
     driver: ru.yandex.s3.csi
     volumeHandle: romm-library
@@ -38,11 +38,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: romm-library
+  name: romm-library-s3
   namespace: default
 spec:
   storageClassName: ""
-  volumeName: romm-library
+  volumeName: romm-library-s3
   accessModes:
     - ReadWriteOnce
   resources:
