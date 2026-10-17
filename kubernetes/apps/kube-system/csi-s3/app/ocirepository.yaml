@@ -1,0 +1,14 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: csi-s3
+spec:
+  interval: 15m
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  ref:
+    tag: 0.43.7
+    digest: sha256:64e4d2708dee4ac4907a14ea16859e76a77df038a7969ca26321f66b456e0c0a
+  url: oci://cr.yandex/yc-marketplace/yandex-cloud/csi-s3/csi-s3
