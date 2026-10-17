@@ -128,7 +128,7 @@ spec:
     persistence:
       library:
         type: persistentVolumeClaim
-        existingClaim: romm-s3
+        existingClaim: romm-library
         advancedMounts:
           romm:
             app:
