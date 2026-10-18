@@ -146,6 +146,13 @@ spec:
             app:
               - path: /romm/resources
                 readOnly: false
+      resources-tmp:
+        type: emptyDir
+        advancedMounts:
+          romm:
+            app:
+              - path: /romm/resources/tmp
+                readOnly: false
       assets:
         type: persistentVolumeClaim
         accessMode: ReadWriteOnce
