@@ -1,6 +1,6 @@
 converto:
   download_conversion_enabled: true
-  scan_metadata: true
+  scan_metadata: false
   cache_ttl_hours: 24
   cache_max_size_gb: 20
   platform_formats:
