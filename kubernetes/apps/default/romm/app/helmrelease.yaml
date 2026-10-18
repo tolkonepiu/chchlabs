@@ -72,6 +72,7 @@ spec:
               HASHEOUS_API_ENABLED: "true"
               PLAYMATCH_API_ENABLED: "true"
               HLTB_API_ENABLED: "true"
+              ROM_CONVERTO_ENABLED: "true"
             ports:
               - name: http
                 containerPort: &port 8080
@@ -156,17 +157,13 @@ spec:
             app:
               - path: /romm/assets
                 readOnly: false
-      config:
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        storageClass: longhorn
-        size: 1Gi
-        retain: true
-        advancedMounts:
-          romm:
-            app:
-              - path: /romm/config
-                readOnly: false
+      config-file:
+        type: configMap
+        name: romm-configmap
+        globalMounts:
+          - path: /romm/config/config.yml
+            subPath: config.yaml
+            readOnly: true
     service:
       app:
         controller: *app

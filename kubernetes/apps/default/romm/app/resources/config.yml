@@ -1,0 +1,14 @@
+converto:
+  download_conversion_enabled: true
+  scan_metadata: true
+  cache_ttl_hours: 24
+  cache_max_size_gb: 20
+  platform_formats:
+    psx: chd
+    ps2: chd
+    psp: chd
+    ngc: rvz
+    wii: rvz
+    xbox360: zar
+    switch: nsz
+    switch-2: nsz
