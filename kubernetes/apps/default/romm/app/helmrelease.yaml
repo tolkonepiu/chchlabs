@@ -73,6 +73,8 @@ spec:
               PLAYMATCH_API_ENABLED: "true"
               HLTB_API_ENABLED: "true"
               ROM_CONVERTO_ENABLED: "true"
+              ENABLE_SCHEDULED_CLEANUP_ORPHANED_RESOURCES: "true"
+              SCHEDULED_CLEANUP_ORPHANED_RESOURCES_CRON: "0 5 * * *"
             ports:
               - name: http
                 containerPort: &port 8080
