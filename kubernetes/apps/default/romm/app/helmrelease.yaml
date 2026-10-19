@@ -69,6 +69,7 @@ spec:
               REDIS_PORT: "6379"
               # Dedicated logical database to avoid sharing queue keys.
               REDIS_DB: "1"
+              SCAN_WORKERS: "8"
               HASHEOUS_API_ENABLED: "true"
               PLAYMATCH_API_ENABLED: "true"
               HLTB_API_ENABLED: "true"
