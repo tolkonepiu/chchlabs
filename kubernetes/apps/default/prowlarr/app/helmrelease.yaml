@@ -65,7 +65,6 @@ spec:
               PROWLARR__POSTGRES__LOGDB: prowlarr-log
               PROWLARR__LOG__DBENABLED: "true"
               PROWLARR__SERVER__PORT: &port 9696
-              PROWLARR__AUTH__METHOD: Forms
               PROWLARR__AUTH__REQUIRED: Enabled
             ports:
               - name: http
