@@ -13,5 +13,6 @@ resources:
   - ./isponsorblocktv/ks.yaml
   - ./prowlarr/ks.yaml
   - ./remnawave/ks.yaml
+  - ./romarr/ks.yaml
   - ./romm/ks.yaml
   - ./semaphore/ks.yaml
