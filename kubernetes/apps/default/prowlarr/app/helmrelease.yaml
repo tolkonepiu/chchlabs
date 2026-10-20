@@ -112,6 +112,63 @@ spec:
                 memory: 256Mi
               limits:
                 memory: 1Gi
+          flaresolverr:
+            image:
+              repository: ghcr.io/flaresolverr/flaresolverr
+              tag: v3.5.2@sha256:c80ae007ce2ccdcd217a12426e4f039ef763ff90738c808d38810c3e59323767
+            env:
+              PORT: &flaresolverrPort 8191
+              LOG_LEVEL: info
+              TZ: Etc/UTC
+            ports:
+              - name: flaresolverr
+                containerPort: *flaresolverrPort
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *flaresolverrPort
+                  failureThreshold: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *flaresolverrPort
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *flaresolverrPort
+                  failureThreshold: 3
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 1000
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+              seccompProfile:
+                type: RuntimeDefault
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 1Gi
     defaultPodOptions:
       securityContext:
         runAsUser: 65534
