@@ -77,9 +77,6 @@ spec:
                   httpGet:
                     path: /ping
                     port: *port
-                    httpHeaders:
-                      - name: Host
-                        value: localhost:9696
                   failureThreshold: 60
                   periodSeconds: 10
                   timeoutSeconds: 5
@@ -90,9 +87,6 @@ spec:
                   httpGet:
                     path: /ping
                     port: *port
-                    httpHeaders:
-                      - name: Host
-                        value: localhost:9696
                   failureThreshold: 3
                   periodSeconds: 10
                   timeoutSeconds: 5
@@ -103,9 +97,6 @@ spec:
                   httpGet:
                     path: /ping
                     port: *port
-                    httpHeaders:
-                      - name: Host
-                        value: localhost:9696
                   failureThreshold: 3
                   periodSeconds: 30
                   timeoutSeconds: 5
