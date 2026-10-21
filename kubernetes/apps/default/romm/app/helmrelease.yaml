@@ -76,6 +76,8 @@ spec:
               ROM_CONVERTO_ENABLED: "true"
               ENABLE_SCHEDULED_CLEANUP_ORPHANED_RESOURCES: "true"
               SCHEDULED_CLEANUP_ORPHANED_RESOURCES_CRON: "0 5 * * *"
+              ENABLE_SCHEDULED_CONVERT_IMAGES_TO_WEBP: "true"
+              SCHEDULED_CONVERT_IMAGES_TO_WEBP_CRON: "0 4 * * *"
             ports:
               - name: http
                 containerPort: &port 8080
