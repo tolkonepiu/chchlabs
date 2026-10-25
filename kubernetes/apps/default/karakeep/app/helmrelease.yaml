@@ -33,7 +33,7 @@ spec:
               BROWSER_WEB_URL: http://karakeep-chrome:9222
               CRAWLER_FULL_PAGE_ARCHIVE: "true"
               CRAWLER_STORE_PDF: "true"
-              LLM_OPENAI_API_KEY:
+              OPENAI_API_KEY:
                 valueFrom:
                   secretKeyRef:
                     name: cluster-secrets
@@ -67,9 +67,9 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: 512Mi
+                memory: 1Gi
               limits:
-                memory: 2Gi
+                memory: 4Gi
       chrome:
         forceRename: karakeep-chrome
         replicas: 1
