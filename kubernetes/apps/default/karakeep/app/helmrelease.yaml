@@ -1,0 +1,248 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: karakeep
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  timeout: 15m
+  values:
+    controllers:
+      main:
+        forceRename: karakeep
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/karakeep-app/karakeep
+              tag: 0.34.1@sha256:69ae5315c618b7c14c1af3e34c6e211acdb231793af424ecd1cab0b70691d987
+            envFrom:
+              - secretRef:
+                  name: karakeep-secret
+            env:
+              DATA_DIR: /data
+              NEXTAUTH_URL: https://karakeep.${SECRET_DOMAIN}
+              MEILI_ADDR: http://karakeep-meilisearch:7700
+              BROWSER_WEB_URL: http://karakeep-chrome:9222
+              CRAWLER_FULL_PAGE_ARCHIVE: "true"
+              CRAWLER_STORE_PDF: "true"
+              LLM_OPENAI_API_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: cluster-secrets
+                    key: OPENAI_API_KEY
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  failureThreshold: 60
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 3000
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 2Gi
+      chrome:
+        forceRename: karakeep-chrome
+        replicas: 1
+        pod:
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            runAsNonRoot: true
+            fsGroup: 65534
+            fsGroupChangePolicy: OnRootMismatch
+        containers:
+          app:
+            image:
+              repository: ghcr.io/karakeep-app/karakeep-chrome
+              tag: release@sha256:4ad61127638dd27bfe685222787c5780dd1d083d23a7658c39af657775814c44
+            args:
+              - --disable-gpu
+              - --disable-dev-shm-usage
+              - --hide-scrollbars
+              - --disable-blink-features=AutomationControlled
+              - --window-size=1440,900
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: [ALL]
+              seccompProfile:
+                type: RuntimeDefault
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9222
+                  failureThreshold: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9222
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  tcpSocket:
+                    port: 9222
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+      meilisearch:
+        forceRename: karakeep-meilisearch
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: getmeili/meilisearch
+              tag: v1.41.0@sha256:860fa4baed04ae1c235de870edab0c8006227546dea1bbb6411fbfc5e27cf1db
+            env:
+              MEILI_ENV: production
+              MEILI_NO_ANALYTICS: "true"
+              MEILI_MASTER_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: karakeep-secret
+                    key: MEILI_MASTER_KEY
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 7700
+                  failureThreshold: 60
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 7700
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 7700
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        forceRename: karakeep-data
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+        retain: true
+        advancedMounts:
+          main:
+            app:
+              - path: /data
+      meilisearch:
+        type: persistentVolumeClaim
+        forceRename: karakeep-meilisearch
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+        retain: true
+        advancedMounts:
+          meilisearch:
+            app:
+              - path: /meili_data
+      chrome-tmp:
+        type: emptyDir
+        advancedMounts:
+          chrome:
+            app:
+              - path: /tmp
+    service:
+      app:
+        forceRename: karakeep
+        controller: main
+        type: ClusterIP
+        ports:
+          http:
+            port: 3000
+      chrome:
+        forceRename: karakeep-chrome
+        controller: chrome
+        type: ClusterIP
+        ports:
+          http:
+            port: 9222
+      meilisearch:
+        forceRename: karakeep-meilisearch
+        controller: meilisearch
+        type: ClusterIP
+        ports:
+          http:
+            port: 7700
+    route:
+      app:
+        hostnames:
+          - karakeep.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: karakeep
+                port: 3000

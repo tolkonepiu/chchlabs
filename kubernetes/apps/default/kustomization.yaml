@@ -11,6 +11,7 @@ resources:
   - ./coolify/ks.yaml
   - ./echo/ks.yaml
   - ./isponsorblocktv/ks.yaml
+  - ./karakeep/ks.yaml
   - ./prowlarr/ks.yaml
   - ./remnawave/ks.yaml
   - ./romm/ks.yaml
