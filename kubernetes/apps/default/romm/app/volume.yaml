@@ -30,6 +30,8 @@ spec:
       mounter: geesefs
       options: >-
         --memory-limit 1000
+        --uid 1000
+        --gid 1000
         --dir-mode 0777
         --file-mode 0666
         --no-systemd
