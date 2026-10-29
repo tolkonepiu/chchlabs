@@ -132,6 +132,15 @@ spec:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
     persistence:
+      switch-keys:
+        type: secret
+        name: romm-switch-keys
+        defaultMode: 288 # 0440: readable by root and the pod's fsGroup.
+        advancedMounts:
+          romm:
+            app:
+              - path: /home/romm/.switch
+                readOnly: true
       library:
         type: persistentVolumeClaim
         existingClaim: romm-library-s3
