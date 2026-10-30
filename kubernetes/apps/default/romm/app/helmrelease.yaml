@@ -123,7 +123,7 @@ spec:
                 cpu: 100m
                 memory: 512Mi
               limits:
-                memory: 4Gi
+                memory: 2Gi
     defaultPodOptions:
       securityContext:
         runAsUser: 1000
