@@ -5,7 +5,6 @@ kind: Kustomization
 resources:
   - ./helmrelease.yaml
   - ./secret.sops.yaml
-  - ./switch-keys.sops.yaml
   - ./volume.yaml
 configMapGenerator:
   - name: romm-configmap
