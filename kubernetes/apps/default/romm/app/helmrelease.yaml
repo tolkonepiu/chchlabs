@@ -63,6 +63,7 @@ spec:
                   name: romm-secret
             env:
               ROMM_DB_DRIVER: postgresql
+              ROMM_TMP_PATH: /tmp/romm
               DB_HOST: phobos-rw.database.svc.cluster.local
               DB_PORT: "5432"
               REDIS_HOST: valkey.database.svc.cluster.local
@@ -157,6 +158,14 @@ spec:
           romm:
             app:
               - path: /romm/resources/tmp
+                readOnly: false
+      tmp:
+        type: emptyDir
+        sizeLimit: 100Gi
+        advancedMounts:
+          romm:
+            app:
+              - path: /tmp/romm
                 readOnly: false
       assets:
         type: persistentVolumeClaim
