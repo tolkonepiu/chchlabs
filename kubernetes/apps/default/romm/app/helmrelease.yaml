@@ -185,6 +185,13 @@ spec:
           - path: /romm/config/config.yml
             subPath: config.yml
             readOnly: true
+      nginx-download-limit:
+        type: configMap
+        name: romm-nginx-download-limit
+        globalMounts:
+          - path: /etc/nginx/conf.d/00-romm-download-limit.conf
+            subPath: 00-romm-download-limit.conf
+            readOnly: true
     service:
       app:
         controller: *app
