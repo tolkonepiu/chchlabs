@@ -10,8 +10,5 @@ configMapGenerator:
   - name: romm-configmap
     files:
       - config.yml=./resources/config.yml
-  - name: romm-nginx-download-limit
-    files:
-      - 00-romm-download-limit.conf=./resources/00-romm-download-limit.conf
 generatorOptions:
   disableNameSuffixHash: true
