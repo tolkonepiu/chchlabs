@@ -63,6 +63,8 @@ spec:
                   name: romm-secret
             env:
               ROMM_DB_DRIVER: postgresql
+              # The stock unprivileged S3 gateway owns port 8080 inside this Pod.
+              ROMM_PORT: "8081"
               ROMM_TMP_PATH: /tmp/romm
               DB_HOST: phobos-rw.database.svc.cluster.local
               DB_PORT: "5432"
@@ -81,7 +83,7 @@ spec:
               SCHEDULED_CONVERT_IMAGES_TO_WEBP_CRON: "0 4 * * *"
             ports:
               - name: http
-                containerPort: &port 8080
+                containerPort: &port 8081
             probes:
               startup:
                 enabled: true
@@ -125,6 +127,87 @@ spec:
                 memory: 512Mi
               limits:
                 memory: 2Gi
+          s3-gateway:
+            image:
+              repository: ghcr.io/nginx/nginx-s3-gateway/nginx-oss-s3-gateway
+              tag: unprivileged-oss-20260910@sha256:1fb58210941096003b8c5e548c891df91866e4f72d8c2571077df9b100769baa
+            env:
+              AWS_ACCESS_KEY_ID:
+                valueFrom:
+                  secretKeyRef:
+                    name: romm-secret
+                    key: AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: romm-secret
+                    key: AWS_SECRET_ACCESS_KEY
+              S3_SERVER:
+                valueFrom:
+                  secretKeyRef:
+                    name: romm-secret
+                    key: S3_SERVER
+              S3_REGION:
+                valueFrom:
+                  secretKeyRef:
+                    name: romm-secret
+                    key: S3_REGION
+              S3_BUCKET_NAME: romm-library
+              S3_SERVER_PORT: "443"
+              S3_SERVER_PROTO: https
+              S3_STYLE: path
+              AWS_SIGS_VERSION: "4"
+              ALLOW_DIRECTORY_LIST: "false"
+              PROVIDE_INDEX_PAGE: "false"
+              APPEND_SLASH_FOR_POSSIBLE_DIRECTORY: "false"
+              CORS_ENABLED: "false"
+              IPV6_ENABLED: "false"
+              PROXY_CACHE_MAX_SIZE: 10g
+              PROXY_CACHE_INACTIVE: 24h
+              PROXY_CACHE_VALID_OK: 1h
+              PROXY_CACHE_SLICE_SIZE: 1m
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  failureThreshold: 30
+                  periodSeconds: 10
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 10
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: 8080
+                  periodSeconds: 30
+            securityContext:
+              runAsUser: 101
+              runAsGroup: 101
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+              seccompProfile:
+                type: RuntimeDefault
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+                ephemeral-storage: 1Gi
+              limits:
+                memory: 512Mi
     defaultPodOptions:
       securityContext:
         runAsUser: 1000
@@ -181,16 +264,34 @@ spec:
       config-file:
         type: configMap
         name: romm-configmap
-        globalMounts:
-          - path: /romm/config/config.yml
-            subPath: config.yml
-            readOnly: true
+        advancedMounts:
+          romm:
+            app:
+              - path: /romm/config/config.yml
+                subPath: config.yml
+                readOnly: true
+              - path: /etc/nginx/templates/default.conf.template
+                subPath: nginx.conf.template
+                readOnly: true
+            s3-gateway:
+              - path: /etc/nginx/templates/gateway/s3_server.conf.template
+                subPath: s3-server.conf
+                readOnly: true
+      s3-cache:
+        type: emptyDir
+        # Full-object and slice caches each have a 10g upstream limit.
+        sizeLimit: 22Gi
+        advancedMounts:
+          romm:
+            s3-gateway:
+              - path: /var/cache/nginx
     service:
       app:
         controller: *app
         ports:
           http:
-            port: *port
+            port: &servicePort 8080
+            targetPort: http
     route:
       app:
         hostnames:
@@ -205,4 +306,4 @@ spec:
         rules:
           - backendRefs:
               - name: *app
-                port: *port
+                port: *servicePort
