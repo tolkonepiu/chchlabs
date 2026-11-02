@@ -10,7 +10,8 @@ configMapGenerator:
   - name: romm-configmap
     files:
       - config.yml=./resources/config.yml
-      - nginx.conf.template=./resources/nginx.conf.template
+      - nginx-library.conf=./resources/nginx-library.conf
+      - patch-nginx.py=./resources/patch-nginx.py
       - s3-server.conf=./resources/s3-server.conf
 generatorOptions:
   disableNameSuffixHash: true
