@@ -1,35 +1,4 @@
-# CrowdSec operations
-
-This deployment runs the central CrowdSec Local API (LAPI), Kubernetes log agents,
-and the web UI in namespace `security`. The core configuration is in
-[app/helmrelease.yaml](app/helmrelease.yaml); the UI is in [ui/](ui/), and the
-Gateway bouncer is managed separately in [../envoy-proxy-bouncer/](../envoy-proxy-bouncer/).
-
-## Roles and endpoints
-
-- **Agent / machine:** parses logs and sends alerts to LAPI using a machine login
-  and password. Each external agent needs its own machine registration.
-- **Bouncer:** fetches decisions using an API key and enforces them, for example
-  with firewall rules. A bouncer key is not a machine password.
-- **Web UI user:** signs into the dashboard. These local users are separate from
-  machine credentials and bouncer keys; the installed UI cannot provision those
-  credentials. Use `cscli` for registration.
-
-| Purpose                                           | Endpoint                                                  |
-| ------------------------------------------------- | --------------------------------------------------------- |
-| Internal clients: UI, bouncer, and cluster agents | `http://crowdsec-service.security.svc.cluster.local:8080` |
-| External agents and bouncers over the tailnet     | `https://crowdsec-lapi.${SECRET_DOMAIN}/`                 |
-| Web UI over the tailnet                           | `https://crowdsec.${SECRET_DOMAIN}/`                      |
-
-Both hostnames use the existing `network/envoy-internal` Gateway's `https`
-listener and wildcard TLS certificate. LAPI and the UI have no public-internet
-ingress. The [LAPI HTTPRoute](app/httproute.yaml) forwards to `crowdsec-service:8080`
-in `security`. Internal clients should keep using cluster DNS.
-
-The separate Envoy bouncer protects only `envoy-external`. External authorization
-is fail-closed: an unavailable authorization service produces HTTP 503. A LAPI
-outage after initial synchronization is different: the bouncer can continue
-enforcing cached decisions, which may become stale.
+# Add external CrowdSec clients
 
 ## Before you start
 
@@ -156,47 +125,3 @@ sudo journalctl -u crowdsec --since "10 minutes ago"
 
 Successful LAPI authentication does not by itself prove logs are being collected.
 Check the agent's logs and acquisition configuration as well.
-
-## Inspect the central deployment
-
-Run these read-only commands on the **admin workstation**:
-
-```sh
-kubectl -n security get helmreleases crowdsec crowdsec-web-ui envoy-proxy-bouncer
-kubectl -n security get pods
-kubectl -n security logs deploy/crowdsec-lapi --since=10m
-kubectl -n security get httproute crowdsec-lapi -o yaml
-kubectl -n security exec deploy/crowdsec-lapi -- cscli machines list
-kubectl -n security exec deploy/crowdsec-lapi -- cscli bouncers list
-kubectl -n security exec deploy/crowdsec-lapi -- cscli alerts list
-kubectl -n security exec deploy/crowdsec-lapi -- cscli decisions list
-```
-
-For the HTTPRoute, look for `Accepted` and `ResolvedRefs` conditions under its
-internal Gateway parent. DNS, tailnet connectivity, and successful authentication
-still need to work independently. The web UI provides another way to inspect
-alerts and decisions; its login is not a LAPI machine login.
-
-## Revoke access and handle managed keys
-
-The following are **destructive administrative commands**, not health checks.
-Run only when intentionally revoking the named external client's access:
-
-```sh
-kubectl -n security exec deploy/crowdsec-lapi -- cscli bouncers delete firewall-server1
-kubectl -n security exec deploy/crowdsec-lapi -- cscli machines delete server1
-```
-
-Revocation does not guarantee immediate removal of already-installed firewall
-rules or cached decisions. Retire or reconfigure the affected client as needed.
-
-The existing Gateway bouncer is managed differently: the core HelmRelease uses
-`BOUNCER_KEY_envoy_proxy_bouncer` to register identity `envoy_proxy_bouncer` from
-the SOPS-managed Secret `envoy-proxy-bouncer`, key `api-key`. Underscores make the
-registration name suitable for the environment-variable suffix.
-
-This startup registration is **create-only**. Deleting that managed identity can
-cause it to be recreated on the next LAPI restart. Changing only the Secret does
-not rotate an existing identity's stored key. Coordinate a new key **and a new
-registration name**, update the consuming bouncer, verify replacement readiness
-and synchronization, then retire the old registration and its bootstrap entry.

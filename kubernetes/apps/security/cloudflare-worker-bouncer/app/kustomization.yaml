@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrelease.yaml
+  - ./secret.sops.yaml
+configMapGenerator:
+  - name: cloudflare-worker-bouncer-config
+    files:
+      - crowdsec-cloudflare-worker-bouncer.yaml=./resources/crowdsec-cloudflare-worker-bouncer.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled

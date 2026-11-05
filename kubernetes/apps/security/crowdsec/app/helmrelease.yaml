@@ -93,6 +93,11 @@ spec:
             secretKeyRef:
               name: envoy-proxy-bouncer
               key: api-key
+        - name: BOUNCER_KEY_cloudflare_worker_bouncer
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-worker-bouncer-lapi
+              key: api-key
       lifecycle:
         postStart:
           exec:

@@ -8,5 +8,6 @@ components:
   - ../../components/common
 
 resources:
+  - ./cloudflare-worker-bouncer/ks.yaml
   - ./crowdsec/ks.yaml
   - ./envoy-proxy-bouncer/ks.yaml

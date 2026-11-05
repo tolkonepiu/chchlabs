@@ -1,0 +1,70 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudflare-worker-bouncer
+spec:
+  # Populate the SOPS secret and review the protected route before enabling.
+  suspend: true
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  values:
+    controllers:
+      cloudflare-worker-bouncer:
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/crowdsecurity/cloudflare-worker-bouncer
+              tag: v0.0.18@sha256:5a736b48156c0b75f900f0e6cc937b6d74b2015fe8ab240154b7059531637c9a
+            env:
+              SECRET_DOMAIN:
+                valueFrom:
+                  secretKeyRef:
+                    name: cluster-secrets
+                    key: SECRET_DOMAIN
+              CROWDSEC_LAPI_KEY:
+                valueFrom:
+                  secretKeyRef:
+                    name: cloudflare-worker-bouncer-lapi
+                    key: api-key
+            envFrom:
+              - secretRef:
+                  name: cloudflare-worker-bouncer-secret
+            probes:
+              liveness:
+                enabled: false
+              readiness:
+                enabled: false
+              startup:
+                enabled: false
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
+    defaultPodOptions:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+    persistence:
+      config:
+        type: configMap
+        name: cloudflare-worker-bouncer-config
+        globalMounts:
+          - path: /etc/crowdsec/bouncers/crowdsec-cloudflare-worker-bouncer.yaml
+            subPath: crowdsec-cloudflare-worker-bouncer.yaml
+            readOnly: true
