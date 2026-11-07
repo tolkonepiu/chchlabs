@@ -8,3 +8,4 @@ components:
 
 resources:
   - ./hindsight/ks.yaml
+  - ./paseo/ks.yaml
