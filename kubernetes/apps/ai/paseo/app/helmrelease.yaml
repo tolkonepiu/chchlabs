@@ -56,6 +56,9 @@ spec:
             image:
               repository: ghcr.io/getpaseo/hub
               tag: 0.11.0@sha256:e2d9370644310bc8a6ad2f0859e4910492dd99eacf57208104c34e08a4ed2c45
+            envFrom:
+              - secretRef:
+                  name: paseo-secret
             env:
               - name: POSTGRES_DB
                 valueFrom:
