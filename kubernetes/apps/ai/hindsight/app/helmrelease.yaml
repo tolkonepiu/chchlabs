@@ -1,0 +1,154 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: hindsight
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: hindsight
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: hindsight-api
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: hindsight-api
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: api
+                        env:
+                          - name: POSTGRES_PASSWORD
+                            valueFrom:
+                              secretKeyRef:
+                                name: hindsight-secret
+                                key: HINDSIGHT_DB_PASS
+                          - name: HINDSIGHT_API_LLM_API_KEY
+                            valueFrom:
+                              secretKeyRef:
+                                name: cluster-secrets
+                                key: OPENAI_API_KEY
+                          - name: HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY
+                            valueFrom:
+                              secretKeyRef:
+                                name: cluster-secrets
+                                key: OPENAI_API_KEY
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: hindsight-control-plane
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: hindsight-control-plane
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: control-plane
+                        envFrom: null
+  values:
+    existingSecret: hindsight-secret
+    databaseUrl: postgresql://$(HINDSIGHT_DB_USER):$(HINDSIGHT_DB_PASS)@phobos-rw.database.svc.cluster.local:5432/$(HINDSIGHT_DBNAME)?sslmode=require
+    postgresql:
+      enabled: false
+      external:
+        host: phobos-rw.database.svc.cluster.local
+        port: 5432
+    api:
+      env:
+        HINDSIGHT_API_LLM_PROVIDER: openai
+        HINDSIGHT_API_LLM_MODEL: gpt-4o-mini
+        HINDSIGHT_API_EMBEDDINGS_PROVIDER: openai
+        HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL: text-embedding-3-small
+        HINDSIGHT_API_VECTOR_EXTENSION: pgvector
+      startupProbe:
+        httpGet:
+          path: /health/live
+          port: 8888
+        periodSeconds: 10
+        failureThreshold: 60
+      extraInitContainers:
+        - name: 01-init-db
+          image: &postgresInit ghcr.io/home-operations/postgres-init:18.6@sha256:87627baaddb0cabed4ebe033e75038e5c7b6b081c18e86514c99067179a90719
+          env:
+            - name: INIT_POSTGRES_HOST
+              value: phobos-rw.database.svc.cluster.local
+            - name: INIT_POSTGRES_PORT
+              value: "5432"
+            - name: INIT_POSTGRES_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-secret
+                  key: HINDSIGHT_DBNAME
+            - name: INIT_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-secret
+                  key: HINDSIGHT_DB_USER
+            - name: INIT_POSTGRES_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-secret
+                  key: HINDSIGHT_DB_PASS
+            - name: INIT_POSTGRES_SUPER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_USER
+            - name: INIT_POSTGRES_SUPER_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_PASS
+        - name: 02-init-vector
+          image: *postgresInit
+          command: [psql]
+          args: ["-v", "ON_ERROR_STOP=1", "-c", "CREATE EXTENSION IF NOT EXISTS vector;"]
+          env:
+            - name: PGHOST
+              value: phobos-rw.database.svc.cluster.local
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: hindsight-secret
+                  key: HINDSIGHT_DBNAME
+            - name: PGSSLMODE
+              value: require
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-secrets
+                  key: POSTGRES_SUPER_PASS
+    ingress:
+      enabled: false
+    gatewayApi:
+      enabled: true
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+          sectionName: https
+      hostnames:
+        - hindsight.${SECRET_DOMAIN}
+      paths:
+        - path: /
+          service: controlPlane
