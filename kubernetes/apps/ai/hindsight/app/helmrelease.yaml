@@ -69,10 +69,6 @@ spec:
         port: 5432
     api:
       replicaCount: 1
-      # A stable worker ID must not overlap between old and new pods.
-      strategy:
-        type: Recreate
-        rollingUpdate: null
       env:
         HINDSIGHT_API_WORKER_ID: hindsight-api
         HINDSIGHT_API_LLM_PROVIDER: openai
