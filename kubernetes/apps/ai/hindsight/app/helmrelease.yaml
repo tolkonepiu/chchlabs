@@ -70,7 +70,6 @@ spec:
     api:
       replicaCount: 1
       env:
-        HINDSIGHT_API_WORKER_ID: hindsight-api
         HINDSIGHT_API_LLM_PROVIDER: openai
         HINDSIGHT_API_LLM_MODEL: gpt-4o-mini
         HINDSIGHT_API_EMBEDDINGS_PROVIDER: openai
