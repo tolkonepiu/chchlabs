@@ -10,6 +10,6 @@ spec:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
   ref:
-    tag: 1.2.0
-    digest: sha256:9c6081902317a1f9ac86f79c56319373bc1e358caa67b5e7df37e119317660aa
+    tag: 1.2.1
+    digest: sha256:4781a117dcafa4e776218a5988f8047a30379d2e195130cf44cc2055dc028258
   url: oci://ghcr.io/vectorize-io/charts/hindsight
