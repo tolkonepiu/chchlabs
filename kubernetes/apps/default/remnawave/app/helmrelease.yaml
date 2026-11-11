@@ -58,7 +58,7 @@ spec:
           app:
             image:
               repository: ghcr.io/remnawave/backend
-              tag: 3.4.8@sha256:d87ba51deb99486983f599edaf14d1c2127631e66989d7692dd53644b7857f81
+              tag: 3.4.10@sha256:19efa7828b3a2e2c2f8f8503c175d84c9391358a6b1a5fd3b8112b8064ca6038
             envFrom:
               - secretRef:
                   name: remnawave-secret
