@@ -58,7 +58,7 @@ spec:
           app:
             image:
               repository: ghcr.io/coollabsio/coolify
-              tag: 4.6.0@sha256:8821fbb5d1eb083a7378d9c0f6c85eae56ba0171b69947ebcb415eb8133706d7
+              tag: 4.7.5@sha256:ac2259a438f0221e73eca2838c0c929ff2fd304f8345daabc85c910b6c83d6ee
             envFrom:
               - secretRef:
                   name: coolify-secret
