@@ -12,6 +12,72 @@ spec:
   values:
     controllers:
       paseo:
+        forceRename: *app
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        pod:
+          automountServiceAccountToken: false
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
+        containers:
+          app:
+            image:
+              repository: ghcr.io/getpaseo/paseo
+              tag: 0.15.4@sha256:d9c05730c66a6b64a708303e7cfa6a4009f31f89507bf986fb5b098af25a1c3f
+            env:
+              PASEO_LISTEN: 0.0.0.0:6767
+              PASEO_WEB_UI_ENABLED: "true"
+              PASEO_HOSTNAMES: &appHost paseo.${SECRET_DOMAIN}
+              PASEO_RELAY_ENABLED: "true"
+              PASEO_RELAY_ENDPOINT: paseo-relay.ai.svc.cluster.local:4000
+              PASEO_RELAY_USE_TLS: "false"
+              PASEO_RELAY_PUBLIC_ENDPOINT: paseo-relay.${SECRET_DOMAIN}:443
+              PASEO_RELAY_PUBLIC_USE_TLS: "true"
+              PASEO_PASSWORD:
+                valueFrom:
+                  secretKeyRef:
+                    name: paseo-secret
+                    key: PASEO_PASSWORD
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: &port 6767
+                  failureThreshold: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: ["ALL"] }
+      hub:
+        forceRename: &hub paseo-hub
         replicas: 1
         strategy: Recreate
         annotations:
@@ -87,14 +153,14 @@ spec:
               - name: PASEO_HUB_BIND
                 value: 0.0.0.0
               - name: PASEO_HUB_APP_URL
-                value: https://paseo.${SECRET_DOMAIN}
+                value: https://paseo-hub.${SECRET_DOMAIN}
             probes:
               startup:
                 enabled: true
                 custom: true
                 spec:
                   tcpSocket:
-                    port: &port 3000
+                    port: &hubPort 3000
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 30
@@ -103,7 +169,7 @@ spec:
                 custom: true
                 spec:
                   tcpSocket:
-                    port: *port
+                    port: *hubPort
                   periodSeconds: 10
                   timeoutSeconds: 5
                   failureThreshold: 3
@@ -112,7 +178,7 @@ spec:
                 custom: true
                 spec:
                   tcpSocket:
-                    port: *port
+                    port: *hubPort
                   periodSeconds: 30
                   timeoutSeconds: 5
                   failureThreshold: 3
@@ -125,16 +191,93 @@ spec:
                 memory: 128Mi
               limits:
                 memory: 512Mi
+      relay:
+        forceRename: &relay paseo-relay
+        replicas: 1
+        strategy: Recreate
+        containers:
+          app:
+            image:
+              repository: ghcr.io/getpaseo/paseo-relay
+              tag: latest@sha256:9d5c65d4bd2c42a85a5c8ab329f801a7db41dc4c153ca7bfba6c0857b3cdad0d
+            env:
+              PASEO_RELAY_HOST: 0.0.0.0
+              PASEO_RELAY_PORT: "4000"
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: &relayPort 4000
+                  failureThreshold: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /ready
+                    port: *relayPort
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /health
+                    port: *relayPort
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+    persistence:
+      daemon-home:
+        type: persistentVolumeClaim
+        forceRename: paseo-daemon-home
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+        retain: true
+        advancedMounts:
+          paseo:
+            app:
+              - path: /home/paseo
+      daemon-workspace:
+        type: persistentVolumeClaim
+        forceRename: paseo-daemon-workspace
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 10Gi
+        retain: true
+        advancedMounts:
+          paseo:
+            app:
+              - path: /workspace
     service:
-      paseo:
+      app:
+        forceRename: *app
         controller: *app
         ports:
           http:
             port: *port
+      hub:
+        forceRename: *hub
+        controller: hub
+        ports:
+          http:
+            port: *hubPort
+      relay:
+        forceRename: *relay
+        controller: relay
+        ports:
+          http:
+            port: *relayPort
     route:
       app:
         hostnames:
-          - paseo.${SECRET_DOMAIN}
+          - *appHost
         parentRefs:
           - name: envoy-internal
             namespace: network
@@ -146,9 +289,37 @@ spec:
             timeouts:
               request: 0s
               backendRequest: 0s
+      relay:
+        hostnames:
+          - paseo-relay.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *relay
+                port: *relayPort
+            timeouts:
+              request: 0s
+              backendRequest: 0s
+      hub:
+        hostnames:
+          - paseo-hub.${SECRET_DOMAIN}
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *hub
+                port: *hubPort
+            timeouts:
+              request: 0s
+              backendRequest: 0s
       external:
         hostnames:
-          - paseo.${SECRET_DOMAIN}
+          - ph.${SECRET_DOMAIN}
         parentRefs:
           - name: envoy-external
             namespace: network
@@ -160,5 +331,5 @@ spec:
                   type: Exact
                   value: /webhook
             backendRefs:
-              - name: *app
-                port: *port
+              - name: *hub
+                port: *hubPort
