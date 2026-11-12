@@ -1,0 +1,119 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app gitea-mirror
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  interval: 1h
+  values:
+    controllers:
+      gitea-mirror:
+        replicas: 1
+        strategy: Recreate
+        annotations:
+          reloader.stakater.com/auto: "true"
+        containers:
+          app:
+            image:
+              repository: ghcr.io/raylabshq/gitea-mirror
+              tag: v3.51.7@sha256:70a6a1913cae929260f8b59449613537b77ffd44398d9b8ff8a2ce935fc11d7b
+            envFrom:
+              - secretRef:
+                  name: gitea-mirror-secret
+            env:
+              HOST: 0.0.0.0
+              PORT: "4321"
+              DATABASE_URL: file:data/gitea-mirror.db
+              BETTER_AUTH_URL: https://gitea-mirror.${SECRET_DOMAIN}
+              PUBLIC_BETTER_AUTH_URL: https://gitea-mirror.${SECRET_DOMAIN}
+              BETTER_AUTH_TRUSTED_ORIGINS: https://gitea-mirror.${SECRET_DOMAIN}
+              AUTH_ALLOW_SIGNUP: "false"
+              GITEA_URL: http://forgejo-http.default.svc.cluster.local:3000
+              GITEA_EXTERNAL_URL: https://forgejo.${SECRET_DOMAIN}
+              DESTINATION_PROVIDER: forgejo
+              SCHEDULE_ENABLED: "true"
+              CLEANUP_ENABLED: "false"
+              CLEANUP_DELETE_IF_NOT_IN_GITHUB: "false"
+              CLEANUP_DELETE_FROM_GITEA: "false"
+            probes:
+              startup:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: &port 4321
+                  failureThreshold: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              readiness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  failureThreshold: 3
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+              liveness:
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/health
+                    port: *port
+                  failureThreshold: 3
+                  periodSeconds: 30
+                  timeoutSeconds: 5
+            securityContext:
+              allowPrivilegeEscalation: false
+              # Upstream entrypoint writes migrations outside /app/data.
+              readOnlyRootFilesystem: false
+              capabilities: { drop: ["ALL"] }
+              seccompProfile:
+                type: RuntimeDefault
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                memory: 1Gi
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        runAsNonRoot: true
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+    persistence:
+      data:
+        type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
+        storageClass: longhorn
+        size: 5Gi
+        retain: true
+        globalMounts:
+          - path: /app/data
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: *port
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.${SECRET_DOMAIN}"
+        parentRefs:
+          - name: envoy-internal
+            namespace: network
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *port

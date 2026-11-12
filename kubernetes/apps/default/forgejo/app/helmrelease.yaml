@@ -1,0 +1,166 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fluxcd-community/flux2-schemas/main/helmrelease-helm-v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: forgejo
+  interval: 1h
+  valuesFrom:
+    - kind: Secret
+      name: forgejo-secret
+      valuesKey: email
+      targetPath: gitea.admin.email
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: apps
+              version: v1
+              kind: Deployment
+              name: forgejo
+            patch: |-
+              - op: add
+                path: /spec/template/spec/initContainers/0
+                value:
+                  name: init-db
+                  image: ghcr.io/home-operations/postgres-init:18.6@sha256:87627baaddb0cabed4ebe033e75038e5c7b6b081c18e86514c99067179a90719
+                  env:
+                    - name: INIT_POSTGRES_HOST
+                      value: phobos-rw.database.svc.cluster.local
+                    - name: INIT_POSTGRES_PORT
+                      value: "5432"
+                    - name: INIT_POSTGRES_DBNAME
+                      valueFrom:
+                        secretKeyRef:
+                          name: forgejo-secret
+                          key: database-name
+                    - name: INIT_POSTGRES_USER
+                      valueFrom:
+                        secretKeyRef:
+                          name: forgejo-secret
+                          key: database-user
+                    - name: INIT_POSTGRES_PASS
+                      valueFrom:
+                        secretKeyRef:
+                          name: forgejo-secret
+                          key: database-password
+                    - name: INIT_POSTGRES_SUPER_USER
+                      valueFrom:
+                        secretKeyRef:
+                          name: cluster-secrets
+                          key: POSTGRES_SUPER_USER
+                    - name: INIT_POSTGRES_SUPER_PASS
+                      valueFrom:
+                        secretKeyRef:
+                          name: cluster-secrets
+                          key: POSTGRES_SUPER_PASS
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop: [ALL]
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 64Mi
+                    limits:
+                      memory: 256Mi
+  values:
+    deployment:
+      annotations:
+        reloader.stakater.com/auto: "true"
+    podSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: [ALL]
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    persistence:
+      enabled: true
+      claimName: forgejo-data
+      storageClass: longhorn
+      accessModes: [ReadWriteOnce]
+      size: 50Gi
+      annotations:
+        helm.sh/resource-policy: keep
+    service:
+      http:
+        port: 3000
+    httpRoute:
+      enabled: true
+      hostnames:
+        - forgejo.${SECRET_DOMAIN}
+      parentRefs:
+        - name: envoy-internal
+          namespace: network
+          sectionName: https
+      port: 3000
+    gitea:
+      admin:
+        existingSecret: forgejo-secret
+      additionalConfigFromEnvs:
+        - name: FORGEJO__DATABASE__NAME
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: database-name
+        - name: FORGEJO__DATABASE__USER
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: database-user
+        - name: FORGEJO__DATABASE__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: database-password
+        - name: FORGEJO__SECURITY__SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: secret-key
+        - name: FORGEJO__SECURITY__INTERNAL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: internal-token
+        - name: FORGEJO__OAUTH2__JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: oauth2-jwt-secret
+      config:
+        server:
+          DOMAIN: forgejo.${SECRET_DOMAIN}
+          ROOT_URL: https://forgejo.${SECRET_DOMAIN}
+          DISABLE_SSH: true
+          START_SSH_SERVER: false
+          LFS_START_SERVER: false
+        service:
+          DISABLE_REGISTRATION: true
+        database:
+          DB_TYPE: postgres
+          HOST: phobos-rw.database.svc.cluster.local:5432
+        # Forgejo 15 names its Valkey-compatible adapters redis, not valkey.
+        cache:
+          ADAPTER: redis
+          HOST: redis://valkey.database.svc.cluster.local:6379/2
+        session:
+          PROVIDER: redis
+          PROVIDER_CONFIG: redis://valkey.database.svc.cluster.local:6379/3
+        queue:
+          TYPE: redis
+          CONN_STR: redis://valkey.database.svc.cluster.local:6379/4

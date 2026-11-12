@@ -10,6 +10,8 @@ resources:
   - ./atuin/ks.yaml
   - ./coolify/ks.yaml
   - ./echo/ks.yaml
+  - ./forgejo/ks.yaml
+  - ./gitea-mirror/ks.yaml
   - ./isponsorblocktv/ks.yaml
   - ./karakeep/ks.yaml
   - ./prowlarr/ks.yaml
