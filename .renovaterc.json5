@@ -79,6 +79,9 @@
     },
     {
       matchManagers: ["github-actions"],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
       addLabels: ["renovate/github-action"],
     },
     {
