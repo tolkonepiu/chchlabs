@@ -5,7 +5,6 @@
     "github>home-operations/renovate-presets//apps/cnpg.json5#11.0.0",
     "github>home-operations/renovate-presets//apps/talosFactory.json5#11.0.0",
   ],
-  schedule: ["every weekend"],
   lockFileMaintenance: {
     enabled: true,
     schedule: ["before 3am on the first day of the month"],
@@ -63,6 +62,7 @@
     },
     {
       matchUpdateTypes: ["patch"],
+      automerge: true,
       addLabels: ["type/patch"],
     },
     {
