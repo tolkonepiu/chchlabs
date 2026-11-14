@@ -20,7 +20,7 @@ spec:
           app:
             image:
               repository: ghcr.io/raylabshq/gitea-mirror
-              tag: v3.51.7@sha256:70a6a1913cae929260f8b59449613537b77ffd44398d9b8ff8a2ce935fc11d7b
+              tag: v3.53.0@sha256:4c6c9a1c379060385ed1d0bc5dfd44108b8d4683c58c3b35597649b2b79e180e
             envFrom:
               - secretRef:
                   name: gitea-mirror-secret
