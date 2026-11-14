@@ -20,7 +20,7 @@ spec:
           app:
             image:
               repository: ghcr.io/theduffman85/crowdsec-web-ui
-              tag: 2026.11.8@sha256:c531d36780cfb072023aa273849ea081e2a6dc18df15326dde6af7dcc6cda160
+              tag: 2026.11.11@sha256:b2c4e13d1a36ab306db090d58efb54ab347ea5616c81badcb5bd8055e5dc4c2c
             env:
               CONFIG_AUTH_ENABLED: "true"
               CONFIG_INSTANCE_LAPI_URL: http://crowdsec-service.security.svc.cluster.local:8080
