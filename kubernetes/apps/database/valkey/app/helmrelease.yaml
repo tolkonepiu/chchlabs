@@ -10,15 +10,16 @@ spec:
     name: *name
   interval: 1h
   values:
+    deploymentStrategy: RollingUpdate
     replica:
       enabled: false
-    dataStorage:
+    persistence:
       enabled: false
     auth:
       enabled: false
     tls:
       enabled: false
-    valkeyConfig: |
+    extraConfig: |
       cluster-enabled no
       maxmemory 384mb
       maxmemory-policy noeviction
