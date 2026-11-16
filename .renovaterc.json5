@@ -63,6 +63,8 @@
     {
       matchUpdateTypes: ["patch"],
       automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
       addLabels: ["type/patch"],
     },
     {
