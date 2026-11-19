@@ -139,7 +139,7 @@ spec:
           s3-gateway:
             image:
               repository: ghcr.io/nginx/nginx-s3-gateway/nginx-oss-s3-gateway
-              tag: unprivileged-oss-20260910@sha256:1fb58210941096003b8c5e548c891df91866e4f72d8c2571077df9b100769baa
+              tag: latest@sha256:166f1ad89dc7ee28d3846f74c6ce4916390603c9ce5a8f778ca68758cc17344d
             env:
               AWS_ACCESS_KEY_ID:
                 valueFrom:
@@ -309,9 +309,9 @@ spec:
         hostnames:
           - "{{ .Release.Name }}.${SECRET_DOMAIN}"
         parentRefs:
-          - name: envoy-external
-            namespace: network
-            sectionName: https
+          # - name: envoy-external
+          #   namespace: network
+          #   sectionName: https
           - name: envoy-internal
             namespace: network
             sectionName: https
