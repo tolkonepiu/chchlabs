@@ -9,11 +9,6 @@ spec:
     kind: OCIRepository
     name: forgejo
   interval: 1h
-  valuesFrom:
-    - kind: Secret
-      name: forgejo-secret
-      valuesKey: email
-      targetPath: gitea.admin.email
   postRenderers:
     - kustomize:
         patches:
@@ -72,6 +67,12 @@ spec:
     deployment:
       annotations:
         reloader.stakater.com/auto: "true"
+      env:
+        - name: GITEA_ADMIN_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-secret
+              key: email
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -111,6 +112,8 @@ spec:
     gitea:
       admin:
         existingSecret: forgejo-secret
+        # The configure-gitea script expands the Secret-backed email at runtime.
+        email: "$GITEA_ADMIN_EMAIL"
       additionalConfigFromEnvs:
         - name: FORGEJO__DATABASE__NAME
           valueFrom:
