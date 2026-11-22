@@ -16,6 +16,15 @@
   },
   packageRules: [
     {
+      description: "Keep PostgreSQL images on major version 18",
+      matchDatasources: ["docker"],
+      matchPackageNames: [
+        "ghcr.io/tensorchord/cloudnative-vectorchord",
+        "ghcr.io/home-operations/postgres-init",
+      ],
+      allowedVersions: "/^18([.-]|$)/",
+    },
+    {
       description: "Karakeep Chrome versioning",
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/karakeep-app/karakeep-chrome"],
