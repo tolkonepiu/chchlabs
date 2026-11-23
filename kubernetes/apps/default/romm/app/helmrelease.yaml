@@ -139,7 +139,7 @@ spec:
           s3-gateway:
             image:
               repository: ghcr.io/nginx/nginx-s3-gateway/nginx-oss-s3-gateway
-              tag: latest@sha256:166f1ad89dc7ee28d3846f74c6ce4916390603c9ce5a8f778ca68758cc17344d
+              tag: latest@sha256:d1b673577a8a38858e4c89b5265fb4e17887c1d8a821b4f33d9f677e5c565f0a
             env:
               AWS_ACCESS_KEY_ID:
                 valueFrom:
