@@ -41,6 +41,9 @@
       matchManagers: ["mise"],
       groupName: "mise tools",
       minimumReleaseAge: "3 days",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
     },
     {
       description: "Talos Group",
@@ -78,6 +81,9 @@
     },
     {
       matchUpdateTypes: ["digest"],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: false,
       addLabels: ["type/digest"],
     },
     {
