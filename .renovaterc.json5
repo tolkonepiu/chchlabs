@@ -43,7 +43,6 @@
       minimumReleaseAge: "3 days",
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
     },
     {
       description: "Talos Group",
@@ -76,14 +75,12 @@
       matchUpdateTypes: ["patch"],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
       addLabels: ["type/patch"],
     },
     {
       matchUpdateTypes: ["digest"],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
       addLabels: ["type/digest"],
     },
     {
@@ -98,7 +95,6 @@
       matchManagers: ["github-actions"],
       automerge: true,
       automergeType: "pr",
-      platformAutomerge: false,
       addLabels: ["renovate/github-action"],
     },
     {
