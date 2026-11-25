@@ -199,7 +199,7 @@ spec:
           app:
             image:
               repository: ghcr.io/getpaseo/paseo-relay
-              tag: latest@sha256:03c8fcb0a0bcf58b87f79e4745f392477bf71c89a2c6cfd3b64e1fa161247265
+              tag: latest@sha256:36820d87bb62c27b1ea64094c40731ca1d6edbf67be602ca7e0de14dca0abb0a
             env:
               PASEO_RELAY_HOST: 0.0.0.0
               PASEO_RELAY_PORT: "4000"
