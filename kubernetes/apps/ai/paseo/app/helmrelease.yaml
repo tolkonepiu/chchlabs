@@ -29,7 +29,7 @@ spec:
           app:
             image:
               repository: ghcr.io/getpaseo/paseo
-              tag: 0.17.6@sha256:bb15466afcb2668a35b54c83a175880b662da8450db239528f6614dacf49b38e
+              tag: 0.18.0@sha256:c3c0fa7ecaafe1ab8c66829d8aeee7c5ebfb335729943df6017f8e6cf3f23d60
             env:
               PASEO_LISTEN: 0.0.0.0:6767
               PASEO_WEB_UI_ENABLED: "true"
